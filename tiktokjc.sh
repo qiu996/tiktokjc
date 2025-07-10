@@ -153,9 +153,6 @@ function Goodbye() {
     echo "******************************************"
     echo ""
     echo -e ""
-    echo -e ""
-    echo -e ""
-    echo -e ""
     #echo -e "${Font_Yellow}检测脚本当天运行次数：${TodayRunTimes}; 共计运行次数：${TotalRunTimes} ${Font_Suffix}"
     echo -e ""
     echo -e "${Font_SkyBlue}【TikTok相关】${Font_Suffix}"
@@ -168,9 +165,6 @@ function Goodbye() {
     echo ""
     echo -e "${Font_Yellow}联系咨询: 小勇${Font_Suffix}"
     echo -e "================================================"
-    echo -e ""
-    echo -e ""
-    echo -e ""
     echo -e ""
 }
 
