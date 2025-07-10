@@ -166,7 +166,7 @@ function Goodbye() {
     echo -e "${Font_Green}✅ ${Font_Suffix} ${Font_SkyBlue}一键配置${Font_Suffix}"
     echo -e "${Font_Green}✅ ${Font_Suffix} ${Font_SkyBlue}支持定制${Font_Suffix}"
     echo ""
-    echo -e "${Font_Yellow}联系咨询: https://t.me/czgno${Font_Suffix}"
+    echo -e "${Font_Yellow}联系咨询: 小勇${Font_Suffix}"
     echo -e "================================================"
     echo -e ""
     echo -e ""
@@ -178,7 +178,6 @@ clear
 
 function ScriptTitle() {
     echo -e "${Font_SkyBlue}【Tiktok区域检测】${Font_Suffix}"
-    echo -e "${Font_Green}BUG反馈或使用交流可加TG群组${Font_Suffix} ${Font_Yellow}https://t.me/tiktok_operate ${Font_Suffix}"
     echo ""
     echo -e " ** 测试时间: $(date)"
     echo ""
