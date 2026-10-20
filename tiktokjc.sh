@@ -52,7 +52,7 @@ if ! mktemp -u --suffix=RRC &>/dev/null; then
     is_busybox=1
 fi
 
-UA_Browser="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.87 Safari/537.36"
+UA_Browser="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
 # 配置代理选项
 function configure_proxy() {
@@ -108,34 +108,55 @@ function get_ip_info() {
     proxy_params=$(get_proxy_params)
     local_ipv4=$(curl $useNIC $proxy_params -4 -s --max-time 10 api64.ipify.org)
     local_ipv4_asterisk=$(awk -F"." '{print $1"."$2".*.*"}' <<<"${local_ipv4}")
-    local_isp4=$(curl $useNIC $proxy_params -s -4 -A $UA_Browser --max-time 10 https://api.ip.sb/geoip/${local_ipv4} | grep organization | cut -f4 -d '"')
+    local_isp4=$(curl $useNIC $proxy_params -s -4 -A "${UA_Browser}" --max-time 10 https://api.ip.sb/geoip/${local_ipv4} | grep organization | cut -f4 -d '"')
 }
 
 function MediaUnlockTest_Tiktok_Region() {
     echo -n -e " Tiktok Region:\t\t\c"
     proxy_params=$(get_proxy_params)
-    local Ftmpresult=$(curl $useNIC $proxy_params --user-agent "${UA_Browser}" -s --max-time 10 "https://www.tiktok.com/")
 
-    if [[ "$Ftmpresult" = "curl"* ]]; then
+    # TikTok 首页已被 WAF(JS Challenge)拦截,/foryou 路径可获取含 "region" 字段的完整页面
+    local Ftmpresult=$(curl $useNIC $proxy_params --user-agent "${UA_Browser}" -sL --compressed --max-time 15 -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8" -H "Accept-Language: en-US,en;q=0.9" "https://www.tiktok.com/foryou")
+
+    if [ -z "$Ftmpresult" ]; then
         echo -n -e "\r Tiktok Region:\t\t${Font_Red}Failed (Network Connection)${Font_Suffix}\n"
         return
     fi
 
-    local FRegion=$(echo $Ftmpresult | grep '"region":' | sed 's/.*"region"//' | cut -f2 -d'"')
+    # 从 webapp.app-context 块中提取真实用户区域(页面 <head> 里的 "region" 是 CDN 边缘节点标识,如 ALISG)
+    local AppCtx=$(echo "$Ftmpresult" | tr -d ' \n\r' | grep -o 'app-context":{[^}]*}' | head -n 1)
+    local FRegion=$(echo "$AppCtx" | grep -o '"region":"[A-Za-z]*"' | head -n 1 | cut -f4 -d'"')
+    # 兜底:取两位字母的 region(CDN 标识为 5 位以上,可排除)
+    if [ -z "$FRegion" ]; then
+        FRegion=$(echo "$Ftmpresult" | tr -d ' \n\r' | grep -o '"region":"[A-Za-z][A-Za-z]"' | head -n 1 | cut -f4 -d'"')
+    fi
     if [ -n "$FRegion" ]; then
         echo -n -e "\r Tiktok Region:\t\t${Font_Green}【${FRegion}】${Font_Suffix}\n"
         return
     fi
 
-    local STmpresult=$(curl $useNIC $proxy_params --user-agent "${UA_Browser}" -sL --max-time 10 -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9" -H "Accept-Encoding: gzip" -H "Accept-Language: en" "https://www.tiktok.com" | gunzip 2>/dev/null)
-    local SRegion=$(echo $STmpresult | grep '"region":' | sed 's/.*"region"//' | cut -f2 -d'"')
+    # 备用方案:重抓一次,同样优先 app-context,并兼容 "geo" 字段
+    local STmpresult=$(curl $useNIC $proxy_params --user-agent "${UA_Browser}" -sL --compressed --max-time 15 -H "Accept-Language: en" "https://www.tiktok.com/foryou?lang=en")
+    local SAppCtx=$(echo "$STmpresult" | tr -d ' \n\r' | grep -o 'app-context":{[^}]*}' | head -n 1)
+    local SRegion=$(echo "$SAppCtx" | grep -o '"region":"[A-Za-z]*"' | head -n 1 | cut -f4 -d'"')
+    if [ -z "$SRegion" ]; then
+        SRegion=$(echo "$STmpresult" | tr -d ' \n\r' | grep -o '"region":"[A-Za-z][A-Za-z]"' | head -n 1 | cut -f4 -d'"')
+    fi
+    if [ -z "$SRegion" ]; then
+        SRegion=$(echo "$STmpresult" | tr -d ' \n\r' | grep -o '"geo":"[A-Za-z][A-Za-z]"' | head -n 1 | cut -f4 -d'"')
+    fi
     if [ -n "$SRegion" ]; then
         echo -n -e "\r Tiktok Region:\t\t${Font_Yellow}【${SRegion}】${Font_Suffix}\n"
         return
+    fi
+
+    # 检测是否被 WAF 拦截
+    if echo "$Ftmpresult$STmpresult" | grep -qi "wafchallengeid\|SlardarWAF"; then
+        echo -n -e "\r Tiktok Region:\t\t${Font_Red}Failed (WAF Blocked)${Font_Suffix}\n"
     else
         echo -n -e "\r Tiktok Region:\t\t${Font_Red}Failed${Font_Suffix}\n"
-        return
     fi
+    return
 }
 
 function Heading() {
