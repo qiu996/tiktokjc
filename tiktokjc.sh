@@ -60,7 +60,8 @@ function configure_proxy() {
     echo -e "1. ${Font_Green}自动默认检测本机${Font_Suffix}"
     echo -e "2. ${Font_Yellow}自定义输入Socks5代理(有密码验证)${Font_Suffix}"
     
-    read -p "请输入选项(1-2): " choice
+    read -p "请输入选项(1-2,默认1): " choice
+    choice=${choice:-1}
     
     case $choice in
         1)
